@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion du Workshops</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    
+    <!-- Navbar -->
+    <nav class="bg-blue-600 p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="#" class="text-white text-2xl font-bold">Gestion du Workshops</a>
+            <div>
+                <a href="Gestion du Workshops (acuile).html" class="text-white px-4 hover:underline">Accueil</a>
+                <a href="f-final-tolment.html" class="text-gray-400 px-4 hover:underline">Active Full-Time Faculty</a>
+                <a href="f-final-Others.html" class="text-white px-4 hover:underline">Others</a>
+                <a href="#" class="text-white px-4 hover:underline">Déconnexion</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Recherche et Filtration -->
+    <div class="container mx-auto mt-8 p-4">
+        <button onclick="showTable('workshops')" class="bg-blue-500 text-white px-4 py-2 rounded">Liste des Workshops</button>
+        <button onclick="showTable('presenters')" class="bg-green-500 text-white px-4 py-2 rounded">Liste des Présentateurs</button>
+    </div>
+
+    <!-- Recherche et Filtration -->
+    <div class="container mx-auto mt-8 p-4">
+        <input type="text" id="search" placeholder="Rechercher un Workshop" class="w-full p-3 border border-gray-300 rounded-lg" onkeyup="filterTable()">
+        <button onclick="toggleAddForm()" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded">Ajouter</button>
+    </div>
+
+    <!-- Sélection du type d'ajout -->
+    <div id="addSelection" class="container mx-auto mt-4 p-4 bg-white shadow-lg rounded-lg hidden">
+        <h2 class="text-xl font-semibold mb-4">Ajouter un élément</h2>
+        <button onclick="toggleAddWorkshopForm()" class="bg-blue-500 text-white px-4 py-2 rounded mr-2">Ajouter un Workshop</button>
+        <button onclick="toggleAddPresenterForm()" class="bg-green-500 text-white px-4 py-2 rounded">Ajouter un Présentateur</button>
+    </div>
+
+    <!-- Ajout de Workshop (caché par défaut) -->
+    <div id="addWorkshopForm" class="container mx-auto mt-4 p-4 bg-white shadow-lg rounded-lg hidden relative">
+        <button onclick="toggleAddWorkshopForm()" class="absolute top-2 right-2 text-gray-600 hover:text-gray-900">✕</button>
+        <h2 class="text-xl font-semibold mb-4">Ajouter un Workshop</h2>
+        <div class="grid grid-cols-4 gap-4">
+            <input type="number" id="workshopId" placeholder="ID" class="p-2 border border-gray-300 rounded">
+            <input type="date" id="workshopDate" placeholder="Date" class="p-2 border border-gray-300 rounded">
+            <input type="text" id="workshopTitle" placeholder="Titre" class="p-2 border border-gray-300 rounded">
+            <input type="text" id="presenter" placeholder="Présentateur" class="p-2 border border-gray-300 rounded">
+            <input type="number" id="duration" placeholder="Durée (min)" class="p-2 border border-gray-300 rounded">
+            <input type="number" id="participants" placeholder="Participants" class="p-2 border border-gray-300 rounded">
+            <input type="text" id="faculty" placeholder="Faculty" class="p-2 border border-gray-300 rounded">
+            <select id="workshopType" class="p-2 border border-gray-300 rounded">
+                <option value="Présentiel">Présentiel</option>
+                <option value="À distance">À distance</option>
+            </select>
+            <button onclick="addWorkshop()" class="bg-blue-500 text-white px-4 py-2 rounded">Ajouter</button>
+        </div>
+    </div>
+
+    <!-- Ajout de Présentateur (caché par défaut) -->
+    <div id="addPresenterForm" class="container mx-auto mt-4 p-4 bg-white shadow-lg rounded-lg hidden relative">
+        <button onclick="toggleAddPresenterForm()" class="absolute top-2 right-2 text-gray-600 hover:text-gray-900">✕</button>
+        <h2 class="text-xl font-semibold mb-4">Ajouter un Présentateur</h2>
+        <div class="grid grid-cols-2 gap-4">
+            <input type="text" id="presenterName" placeholder="Présentateur" class="p-2 border border-gray-300 rounded">
+            <input type="number" id="workshopCount" placeholder="Nombre de Workshops" class="p-2 border border-gray-300 rounded">
+            <button onclick="addPresenter()" class="bg-green-500 text-white px-4 py-2 rounded">Ajouter</button>
+        </div>
+    </div>
+
+    <!-- Message d'erreur stylé pour ID existant -->
+    <div id="errorMessage" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white p-6 rounded-lg shadow-lg hidden z-50">
+        <p class="text-lg font-semibold">Erreur</p>
+        <p id="errorText" class="mt-2">Cet ID de workshop existe déjà !</p>
+        <button onclick="hideErrorMessage()" class="mt-4 bg-white text-red-500 px-4 py-2 rounded hover:bg-gray-200">Fermer</button>
+    </div>
+
+    <!-- Message d'erreur stylé pour champs manquants -->
+    <div id="warningMessage" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-yellow-500 text-white p-6 rounded-lg shadow-lg hidden z-50">
+        <p class="text-lg font-semibold">Attention</p>
+        <p id="warningText" class="mt-2">Veuillez remplir tous les champs !</p>
+        <button onclick="hideWarningMessage()" class="mt-4 bg-white text-yellow-500 px-4 py-2 rounded hover:bg-gray-200">Fermer</button>
+    </div>
+
+    <!-- Table de Workshops -->
+    <div id="workshops" class="container mx-auto mt-8 bg-white shadow-lg rounded-lg p-4">
+        <h2 class="text-xl font-semibold mb-4">Liste des Workshops</h2>
+        <table class="min-w-full bg-white shadow-lg rounded-lg">
+            <thead>
+                <tr>
+                    <th class="py-2 px-4 border">Workshops-ID</th>
+                    <th class="py-2 px-4 border">Date</th>
+                    <th class="py-2 px-4 border">Titre</th>
+                    <th class="py-2 px-4 border">Présentateur</th>
+                    <th class="py-2 px-4 border">Durée</th>
+                    <th class="py-2 px-4 border">Participants</th>
+                    <th class="py-2 px-4 border">Faculty</th>
+                    <th class="py-2 px-4 border">Type</th>
+                    <th class="py-2 px-4 border">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="workshopTableBody">
+                <!-- Les lignes seront ajoutées ici via JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Table des Présentateurs -->
+    <div id="presenters" class="container mx-auto mt-8 bg-white shadow-lg rounded-lg p-4 hidden">
+        <h2 class="text-xl font-semibold mb-4">Liste des Présentateurs</h2>
+        <table class="min-w-full bg-white shadow-lg rounded-lg">
+            <thead>
+                <tr>
+                    <th class="py-2 px-4 border">Nom</th>
+                    <th class="py-2 px-4 border">Nombre de Workshops</th>
+                    <th class="py-2 px-4 border">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="presenterTableBody">
+                <!-- Les lignes seront ajoutées ici via JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Initialisation des workshops dans localStorage s'il n'existe pas
+        if (!localStorage.getItem('workshops')) {
+            localStorage.setItem('workshops', JSON.stringify([]));
+        }
+
+        let oldPresenter = null; // Variable globale pour stocker l'ancien présentateur lors de la modification
+
+        function toggleAddForm() {
+            let selection = document.getElementById("addSelection");
+            selection.classList.toggle("hidden");
+        }
+
+        function toggleAddWorkshopForm() {
+            document.getElementById("addWorkshopForm").classList.toggle("hidden");
+            if (document.getElementById("addWorkshopForm").classList.contains("hidden")) {
+                oldPresenter = null; // Réinitialiser oldPresenter quand le formulaire se ferme
+            }
+        }
+
+        function toggleAddPresenterForm() {
+            document.getElementById("addPresenterForm").classList.toggle("hidden");
+        }
+
+        function showErrorMessage(message) {
+            let errorMessage = document.getElementById("errorMessage");
+            document.getElementById("errorText").textContent = message;
+            errorMessage.classList.remove("hidden");
+        }
+
+        function hideErrorMessage() {
+            document.getElementById("errorMessage").classList.add("hidden");
+        }
+
+        function showWarningMessage(message) {
+            let warningMessage = document.getElementById("warningMessage");
+            document.getElementById("warningText").textContent = message;
+            warningMessage.classList.remove("hidden");
+        }
+
+        function hideWarningMessage() {
+            document.getElementById("warningMessage").classList.add("hidden");
+        }
+
+        function addWorkshop() {
+            let workshopId = document.getElementById("workshopId").value;
+            let workshopDate = document.getElementById("workshopDate").value;
+            let workshopTitle = document.getElementById("workshopTitle").value;
+            let presenter = document.getElementById("presenter").value;
+            let duration = document.getElementById("duration").value;
+            let participants = document.getElementById("participants").value;
+            let faculty = document.getElementById("faculty").value;
+            let workshopType = document.getElementById("workshopType").value;
+
+            // Vérification des champs obligatoires
+            if (!workshopId) {
+                showWarningMessage("Veuillez entrer un ID pour le workshop !");
+                return;
+            }
+            if (!workshopDate) {
+                showWarningMessage("Veuillez entrer une date pour le workshop !");
+                return;
+            }
+            if (!workshopTitle) {
+                showWarningMessage("Veuillez entrer un titre pour le workshop !");
+                return;
+            }
+            if (!presenter) {
+                showWarningMessage("Veuillez entrer un présentateur pour le workshop !");
+                return;
+            }
+            if (!duration && workshopType === "Présentiel") {
+                showWarningMessage("Veuillez entrer une durée pour le workshop (obligatoire pour Présentiel) !");
+                return;
+            }
+            if (!participants) {
+                showWarningMessage("Veuillez entrer un nombre de participants pour le workshop !");
+                return;
+            }
+            if (!faculty) {
+                showWarningMessage("Veuillez entrer une faculté pour le workshop !");
+                return;
+            }
+
+            let workshops = JSON.parse(localStorage.getItem('workshops'));
+
+            // Vérification si l'ID existe déjà (sauf si c'est une modification de l'ID actuel)
+            if (workshops.some(w => w.id === workshopId && !oldPresenter)) {
+                showErrorMessage(`L'ID de workshop ${workshopId} existe déjà !`);
+                return;
+            }
+
+            let table = document.getElementById("workshopTableBody");
+            let row = table.insertRow();
+
+            row.innerHTML = `
+                <td class="py-2 px-4 border">${workshopId}</td>
+                <td class="py-2 px-4 border">${workshopDate}</td>
+                <td class="py-2 px-4 border">${workshopTitle}</td>
+                <td class="py-2 px-4 border">${presenter}</td>
+                <td class="py-2 px-4 border">${duration}</td>
+                <td class="py-2 px-4 border">${participants}</td>
+                <td class="py-2 px-4 border">${faculty}</td>
+                <td class="py-2 px-4 border">${workshopType}</td>
+                <td class="py-2 px-4 border">
+                    <button onclick="editWorkshop(this)" class="bg-yellow-500 text-white px-3 py-1 rounded">Modifier</button>
+                    <button onclick="deleteWorkshop(this)" class="bg-red-500 text-white px-3 py-1 rounded">Supprimer</button>
+                </td>
+            `;
+
+            // Sauvegarde dans localStorage
+            workshops.push({
+                id: workshopId,
+                date: workshopDate,
+                title: workshopTitle,
+                presenter: presenter,
+                duration: workshopType === "Présentiel" ? duration : "", // Durée vide pour "À distance"
+                participants: participants,
+                faculty: faculty,
+                type: workshopType
+            });
+            localStorage.setItem('workshops', JSON.stringify(workshops));
+
+            // Mise à jour du tableau des présentateurs avec gestion de la modification
+            updatePresenterTable(presenter, oldPresenter);
+
+            // Réinitialisation du formulaire
+            document.getElementById("workshopId").value = "";
+            document.getElementById("workshopDate").value = "";
+            document.getElementById("workshopTitle").value = "";
+            document.getElementById("presenter").value = "";
+            document.getElementById("duration").value = "";
+            document.getElementById("participants").value = "";
+            document.getElementById("faculty").value = "";
+            document.getElementById("workshopType").value = "Présentiel";
+
+            // Cacher le formulaire après ajout
+            toggleAddWorkshopForm();
+        }
+
+        function updatePresenterTable(newPresenter, oldPresenter = null) {
+            let presenterTable = document.getElementById("presenterTableBody");
+
+            if (oldPresenter && oldPresenter !== newPresenter) {
+                // Décrémenter l'ancien présentateur
+                Array.from(presenterTable.rows).forEach(row => {
+                    if (row.cells[0].textContent === oldPresenter) {
+                        let workshopCountCell = row.cells[1];
+                        let workshopCount = parseInt(workshopCountCell.textContent) - 1;
+                        if (workshopCount > 0) {
+                            workshopCountCell.textContent = workshopCount;
+                        } else {
+                            row.remove();
+                        }
+                    }
+                });
+            }
+
+            // Gérer le nouveau présentateur
+            let presenterRow = null;
+            Array.from(presenterTable.rows).forEach(row => {
+                if (row.cells[0].textContent === newPresenter) {
+                    presenterRow = row;
+                }
+            });
+
+            if (presenterRow) {
+                // Si le présentateur existe et ce n'est pas une modification du même présentateur
+                if (!oldPresenter || oldPresenter !== newPresenter) {
+                    let workshopCountCell = presenterRow.cells[1];
+                    let workshopCount = parseInt(workshopCountCell.textContent) + 1;
+                    workshopCountCell.textContent = workshopCount;
+                }
+            } else {
+                // Ajouter une nouvelle ligne pour le présentateur
+                let newRow = presenterTable.insertRow();
+                newRow.innerHTML = `
+                    <td class="py-2 px-4 border">${newPresenter}</td>
+                    <td class="py-2 px-4 border">1</td>
+                    <td class="py-2 px-4 border">
+                        <button onclick="editPresenter(this)" class="bg-yellow-500 text-white px-3 py-1 rounded">Modifier</button>
+                        <button onclick="deletePresenter(this)" class="bg-red-500 text-white px-3 py-1 rounded">Supprimer</button>
+                    </td>
+                `;
+            }
+        }
+
+        function deleteWorkshop(button) {
+            let row = button.closest("tr");
+            let workshopId = row.cells[0].textContent;
+            let presenterName = row.cells[3].textContent;
+            row.remove();
+
+            // Mise à jour de localStorage
+            let workshops = JSON.parse(localStorage.getItem('workshops'));
+            workshops = workshops.filter(w => w.id !== workshopId);
+            localStorage.setItem('workshops', JSON.stringify(workshops));
+
+            // Décrémentation du nombre de workshops du présentateur
+            let presenterTable = document.getElementById("presenterTableBody");
+            Array.from(presenterTable.rows).forEach(row => {
+                if (row.cells[0].textContent === presenterName) {
+                    let workshopCountCell = row.cells[1];
+                    let workshopCount = parseInt(workshopCountCell.textContent) - 1;
+                    if (workshopCount > 0) {
+                        workshopCountCell.textContent = workshopCount;
+                    } else {
+                        row.remove();
+                    }
+                }
+            });
+        }
+
+        function editWorkshop(button) {
+            let row = button.closest("tr");
+            let cells = row.querySelectorAll("td");
+            oldPresenter = cells[3].textContent; // Stocker l'ancien présentateur
+            document.getElementById("workshopId").value = cells[0].textContent;
+            document.getElementById("workshopDate").value = cells[1].textContent;
+            document.getElementById("workshopTitle").value = cells[2].textContent;
+            document.getElementById("presenter").value = cells[3].textContent;
+            document.getElementById("duration").value = cells[4].textContent;
+            document.getElementById("participants").value = cells[5].textContent;
+            document.getElementById("faculty").value = cells[6].textContent;
+            document.getElementById("workshopType").value = cells[7].textContent;
+
+            let workshops = JSON.parse(localStorage.getItem('workshops'));
+            workshops = workshops.filter(w => w.id !== cells[0].textContent);
+            localStorage.setItem('workshops', JSON.stringify(workshops));
+
+            row.remove();
+            toggleAddWorkshopForm();
+        }
+
+        function addPresenter() {
+            let table = document.querySelector("#presenterTableBody");
+            let row = table.insertRow();
+            let presenterName = document.getElementById("presenterName").value;
+            let workshopCount = document.getElementById("workshopCount").value;
+
+            row.innerHTML = `
+                <td class="py-2 px-4 border">${presenterName}</td>
+                <td class="py-2 px-4 border">${workshopCount}</td>
+                <td class="py-2 px-4 border">
+                    <button onclick="editPresenter(this)" class="bg-yellow-500 text-white px-3 py-1 rounded">Modifier</button>
+                    <button onclick="deletePresenter(this)" class="bg-red-500 text-white px-3 py-1 rounded">Supprimer</button>
+                </td>
+            `;
+
+            document.getElementById("presenterName").value = "";
+            document.getElementById("workshopCount").value = "";
+            toggleAddPresenterForm();
+        }
+
+        function deletePresenter(button) {
+            let row = button.closest("tr");
+            row.remove();
+        }
+
+        function editPresenter(button) {
+            let row = button.closest("tr");
+            let cells = row.querySelectorAll("td");
+            document.getElementById("presenterName").value = cells[0].textContent;
+            document.getElementById("workshopCount").value = cells[1].textContent;
+            row.remove();
+            toggleAddPresenterForm();
+        }
+
+        function filterTable() {
+            let search = document.getElementById("search").value.toLowerCase();
+            let rows = document.querySelectorAll("#workshopTableBody tr");
+            rows.forEach(row => {
+                let cells = row.querySelectorAll("td");
+                let match = false;
+                cells.forEach(cell => {
+                    if (cell.textContent.toLowerCase().includes(search)) {
+                        match = true;
+                    }
+                });
+                row.style.display = match ? "" : "none";
+            });
+        }
+
+        function showTable(table) {
+            document.getElementById('workshops').classList.add('hidden');
+            document.getElementById('presenters').classList.add('hidden');
+            document.getElementById(table).classList.remove('hidden');
+        }
+    </script>
+</body>
+</html> 
