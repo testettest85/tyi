@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistiques</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f8f9fa;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        select, button {
+            padding: 10px;
+            margin: 10px;
+            border-radius: 5px;
+            border: 1px solid #ced4da;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <h2>Statistiques des Présences</h2>
+    <label for="season-filter">Filtrer par saison :</label>
+    <select id="season-filter" onchange="updateStats()">
+        <option value="">Toutes les saisons</option>
+        <!-- Options remplies dynamiquement -->
+    </select>
+    <table>
+        <thead>
+            <tr>
+                <th>NOM ET PRENOM</th>
+                <th>Total Présences Workshop</th>
+                <th>Total Présence (minutes)</th>
+                <th>Total Présence (heures)</th>
+                <th>Total Workshops par Saison</th>
+            </tr>
+        </thead>
+        <tbody id="statistiques-body">
+            <!-- Les statistiques seront insérées ici dynamiquement -->
+        </tbody>
+    </table>
+    <button onclick="afficherDiagrammes()">Diagrammes</button>
+    <canvas id="chartCanvas" width="400" height="200"></canvas>
+
+    <script>
+        let professeurData = null;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Récupérer les données du professeur depuis localStorage
+            professeurData = JSON.parse(localStorage.getItem("selectedProf"));
+            if (!professeurData) {
+                alert("Aucune donnée de professeur trouvée.");
+                window.location.href = "index.html"; // Retour à la page principale si pas de données
+                return;
+            }
+
+            remplirSeasonFilter();
+            updateStats();
+        });
+
+        function remplirSeasonFilter() {
+            const select = document.getElementById("season-filter");
+            const seasons = ["Spring", "Summer", "Fall", "Winter"];
+            for (let year = 2000; year <= 2050; year++) {
+                seasons.forEach(season => {
+                    const option = document.createElement("option");
+                    option.value = `${season} ${year}`;
+                    option.textContent = `${season} ${year}`;
+                    select.appendChild(option);
+                });
+            }
+        }
+
+        function updateStats() {
+            const seasonFilter = document.getElementById("season-filter").value;
+            const tbody = document.getElementById("statistiques-body");
+            tbody.innerHTML = "";
+
+            if (!professeurData) return;
+
+            const row = tbody.insertRow();
+            const nomCell = row.insertCell(0);
+            const presenceWorkshopCell = row.insertCell(1);
+            const presenceMinutesCell = row.insertCell(2);
+            const presenceHeuresCell = row.insertCell(3);
+            const workshopsParSaisonCell = row.insertCell(4);
+
+            nomCell.textContent = professeurData.nom;
+
+            // Filtrer les workshops selon la saison sélectionnée
+            const filteredWorkshops = seasonFilter
+                ? professeurData.workshops.filter(w => w.joined === seasonFilter && w.presence === "Présent")
+                : professeurData.workshops.filter(w => w.presence === "Présent");
+
+            // Total Présences Workshop
+            const totalPresenceWorkshop = filteredWorkshops.length;
+            presenceWorkshopCell.textContent = totalPresenceWorkshop;
+
+            // Total Présence (minutes)
+            const totalMinutes = filteredWorkshops.reduce((sum, w) => {
+                const duration = parseInt(w.duration) || 0;
+                return sum + duration;
+            }, 0);
+            presenceMinutesCell.textContent = totalMinutes;
+
+            // Total Présence (heures)
+            const totalHeures = (totalMinutes / 60).toFixed(2);
+            presenceHeuresCell.textContent = totalHeures;
+
+            // Total Workshops par Saison
+            const totalWorkshopsSaison = seasonFilter
+                ? filteredWorkshops.length
+                : professeurData.workshops.filter(w => w.presence === "Présent").length;
+            workshopsParSaisonCell.textContent = totalWorkshopsSaison;
+        }
+
+        function afficherDiagrammes() {
+            const seasonFilter = document.getElementById("season-filter").value;
+            const filteredWorkshops = seasonFilter
+                ? professeurData.workshops.filter(w => w.joined === seasonFilter && w.presence === "Présent")
+                : professeurData.workshops.filter(w => w.presence === "Présent");
+
+            const totalPresenceWorkshop = filteredWorkshops.length;
+            const totalMinutes = filteredWorkshops.reduce((sum, w) => {
+                return sum + (parseInt(w.duration) || 0);
+            }, 0);
+
+            const ctx = document.getElementById('chartCanvas').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [professeurData.nom],
+                    datasets: [
+                        {
+                            label: 'Total Présences Workshop',
+                            data: [totalPresenceWorkshop],
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)'
+                        },
+                        {
+                            label: 'Total Présence (minutes)',
+                            data: [totalMinutes],
+                            backgroundColor: 'rgba(255, 99, 132, 0.5)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

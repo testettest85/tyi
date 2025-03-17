@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suivi des Enseignants</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f8f9fa;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #dee2e6;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+    select, input, button {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 5px;
+      border: 1px solid #ced4da;
+    }
+    button {
+      background-color: #28a745;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    #more-info-btn {
+      background-color: #17a2b8;
+    }
+    #more-info-btn:hover {
+      background-color: #138496;
+    }
+    #export-csv {
+      background-color: #ffc107;
+      color: black;
+      font-weight: bold;
+    }
+    #export-csv:hover {
+      background-color: #e0a800;
+    }
+    #delete-confirm-modal, #delete-workshop-modal, #delete-prof-modal, #presence-modal, #modal, #modify-modal, #modify-prof-modal, #modify-workshop-modal, #stats-modal, #more-info-modal, #filter-modal, #filter-date-modal, #filter-joined-modal, #diploma-modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border: 1px solid #ccc;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    #attendance-count {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    #switch-table {
+      background-color: #17a2b8;
+      color: white;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    #switch-table:hover {
+      background-color: #138496;
+    }
+    #filter-btn {
+      background-color: #007bff;
+    }
+    #filter-btn:hover {
+      background-color: #0056b3;
+    }
+    .custom-alert {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #fff3cd;
+      color: #856404;
+      padding: 15px 25px;
+      border: 2px solid #ffeeba;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      z-index: 2000;
+      font-weight: bold;
+      max-width: 500px;
+      text-align: center;
+      animation: fadeIn 0.3s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -20px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    /* Style spécifique pour le diplôme */
+    #diploma-modal {
+      max-width: 600px;
+      text-align: center;
+      border: 2px solid #FFD700; /* Bordure dorée */
+      background: #fff;
+      font-family: 'Times New Roman', serif;
+      padding: 30px;
+    }
+    #diploma-modal .logo {
+      max-width: 150px; /* Taille du logo ajustable */
+      margin-bottom: 20px;
+    }
+    #diploma-modal h1 {
+      font-size: 24px;
+      text-transform: uppercase;
+      color: #2c3e50;
+      margin-bottom: 20px;
+    }
+    #diploma-modal .academic-year {
+      font-size: 16px;
+      color: #7f8c8d;
+    }
+    #diploma-modal .recipient {
+      font-size: 20px;
+      margin: 20px 0;
+      font-weight: bold;
+    }
+    #diploma-modal .workshop-list {
+      list-style: none;
+      padding: 0;
+      margin: 20px 0;
+      font-size: 16px;
+    }
+    #diploma-modal .workshop-list li {
+      margin: 10px 0; 
+    }
+    #diploma-modal .signature {
+      font-family: 'Brush Script MT', cursive; /* Police manuscrite pour la signature */
+      font-size: 24px;
+      color: #2c3e50;
+      margin-top: 30px;
+      margin-bottom: 5px;
+    }
+    #diploma-modal .signature-line {
+      width: 200px; /* Longueur de la ligne */
+      height: 1px;
+      background-color: #2c3e50;
+      margin: 0 auto 10px auto; /* Centré avec marge en bas */
+    }
+    #diploma-modal .signature-subtitle {
+      font-size: 14px;
+      color: #7f8c8d;
+    }
+  </style>
+</head>
+<body>
+  <h2>Suivi de présence des enseignants</h2>
+
+  <label for="workshop">Workshop ID :</label>
+  <select id="workshop"></select>
+  <button onclick="ouvrirModal()">Ajouter un professeur</button>
+  <button onclick="ouvrirStatsModal()">Statistiques</button>
+  <button id="export-csv" onclick="exporterCSV()">📥 Exporter en CSV</button>
+  <button id="switch-table" onclick="switchTable()">Switch Table</button>
+  <p id="attendance-count">Attendance by workshop: 0</p>
+  <label for="search">Rechercher :</label>
+  <input type="text" id="search" placeholder="Nom, école ou date..." onkeyup="searchTable()">
+
+  <table id="main-table">
+    <thead>
+      <tr>
+        <th>NOM ET PRENOM</th>
+        <th>Joined in</th>
+        <th>Faculty position</th>
+        <th>School</th>
+        <th>Duration (min)</th>
+        <th>Date</th>
+        <th>Présence</th>
+        <th>Workshop ID</th>
+        <th>Type</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="table-body">
+    </tbody>
+  </table>
+
+  <!-- Modal pour ajouter/modifier un professeur -->
+  <div id="modal">
+    <h3>Ajouter un professeur</h3>
+    <label>Nom et prénom: <input type="text" id="nom" pattern="[A-Za-z\s]+" required></label><br>
+    <label>Joined in: 
+      <select id="joined" onchange="syncDateWithJoined(this)" required>
+      </select>
+    </label><br>
+    <label>Faculty position: <input type="text" id="position" pattern="[A-Za-z\s]+" required></label><br>
+    <label>School: 
+      <select id="school" required>
+        <option value="LC">LC</option>
+        <option value="SEE">SEE</option>
+        <option value="SSH">SSH</option>
+        <option value="SBA">SBA</option>
+      </select>
+    </label><br>
+    <label>Duration (minutes): <input type="number" id="duration" min="1" required></label><br>
+    <label>Date: <input type="date" id="date" required></label><br>
+    <label>Workshop ID: <input type="number" id="workshopID" oninput="fillWorkshopDetails('modal')" required></label><br>
+    <label>Présence: 
+      <select id="presence" required>
+        <option value="Présent">Présent</option>
+        <option value="Absent">Absent</option>
+      </select>
+    </label><br>
+    <label>Type: 
+      <select id="type" required>
+        <option value="Présentiel">Présentiel</option>
+        <option value="À distance">À distance</option>
+      </select>
+    </label><br>
+    <button onclick="ajouterProfesseur()">Confirmer</button>
+    <button onclick="fermerModal()">Annuler</button>
+  </div>
+
+  <!-- Modal pour marquer la présence -->
+  <div id="presence-modal">
+    <h3>Marquer la présence</h3>
+    <label>Workshop ID: 
+      <select id="presence-workshopID" onchange="fillWorkshopDetails('presence-modal')">
+        <option value="">Sélectionner un Workshop ID</option>
+        <script>
+          for (let i = 1; i <= 10000; i++) {
+            document.write(`<option value="${i}">${i}</option>`);
+          }
+        </script>
+      </select>
+    </label><br>
+    <label>Date: <input type="date" id="presence-date"></label><br>
+    <label>Joined in: 
+      <select id="presence-joined" onchange="syncDateWithJoined(this, document.getElementById('presence-date'))">
+      </select>
+    </label><br>
+    <label>Durée (minutes): <input type="number" id="presence-duration" min="1"></label><br>
+    <label>Présence:
+      <select id="presence-status">
+        <option value="Présent">Présent</option>
+        <option value="Absent">Absent</option>
+      </select>
+    </label><br>
+    <label>Type: 
+      <select id="presence-type">
+        <option value="Présentiel">Présentiel</option>
+        <option value="À distance">À distance</option>
+      </select>
+    </label><br>
+    <button onclick="confirmerPresence()">Confirmer</button>
+    <button onclick="fermerPresenceModal()">Annuler</button>
+  </div>
+
+  <!-- Modal pour modifier un professeur ou un workshop -->
+  <div id="modify-modal">
+    <h3>Vous voulez modifier quoi ?</h3>
+    <button onclick="ouvrirModifyProfModal()">Modifier Prof</button>
+    <button onclick="ouvrirModifyWorkshopModal()">Modifier Workshop</button>
+    <button onclick="fermerModifyModal()">Annuler</button>
+  </div>
+
+  <!-- Modal pour modifier un professeur -->
+  <div id="modify-prof-modal">
+    <h3>Modifier Prof</h3>
+    <label>Nom et prénom: <input type="text" id="modify-nom"></label><br>
+    <label>Faculty position: <input type="text" id="modify-position"></label><br>
+    <label>School: 
+      <select id="modify-school" required>
+        <option value="LC">LC</option>
+        <option value="SEE">SEE</option>
+        <option value="SSH">SSH</option>
+        <option value="SBA">SBA</option>
+      </select>
+    </label><br>
+    <button onclick="confirmerModificationProf()">Confirmer</button>
+    <button onclick="fermerModifyProfModal()">Annuler</button>
+  </div>
+
+  <!-- Modal pour modifier un workshop -->
+  <div id="modify-workshop-modal">
+    <h3>Modifier Workshop</h3>
+    <label>Workshop ID: <input type="number" id="modify-workshopID"></label><br>
+    <label>Duration (minutes): <input type="number" id="modify-duration" min="1"></label><br>
+    <label>Joined in: 
+      <select id="modify-joined" onchange="syncDateWithJoined(this, document.getElementById('modify-date'))">
+      </select>
+    </label><br>
+    <label>Date: <input type="date" id="modify-date"></label><br>
+    <label>Présence: 
+      <select id="modify-presence">
+        <option value="Présent">Présent</option>
+        <option value="Absent">Absent</option>
+      </select>
+    </label><br>
+    <label>Type: 
+      <select id="modify-type">
+        <option value="Présent">Présent</option>
+        <option value="Absent">Absent</option>
+      </select>
+    </label><br>
+    <button onclick="confirmerModificationWorkshop()">Confirmer</button>
+    <button onclick="fermerModifyWorkshopModal()">Annuler</button>
+  </div>
+
+  <!-- Modal pour demander le nom/prénom avant les statistiques -->
+  <div id="stats-modal">
+    <h3>Entrer les informations du professeur</h3>
+    <label>Nom ou Prénom: <input type="text" id="stats-nom" required></label><br>
+    <button onclick="afficherStatistiques()">Confirmer</button>
+    <button onclick="fermerStatsModal()">Annuler</button>
+  </div>
+
+  <!-- Modal de confirmation de suppression -->
+  <div id="delete-confirm-modal">
+    <h3>Vous voulez supprimer quoi ?</h3>
+    <button onclick="ouvrirDeleteWorkshopModal()">Supprimer Workshop</button>
+    <button onclick="ouvrirDeleteProfModal()">Supprimer Prof</button>
+    <button onclick="fermerDeleteConfirmModal()">Annuler</button>
+  </div>
+
+  <!-- Modal pour supprimer un workshop -->
+  <div id="delete-workshop-modal">
+    <h3>Supprimer un Workshop</h3>
+    <label>Workshop ID: <input type="number" id="delete-workshopID"></label><br>
+    <button onclick="confirmerSuppressionWorkshop()">Supprimer</button>
+    <button onclick="fermerDeleteWorkshopModal()">Annuler</button>
+  </div>
+
+  <!-- Modal pour supprimer un professeur -->
+  <div id="delete-prof-modal">
+    <h3>Quelle suppression voulez-vous ?</h3>
+    <button onclick="supprimerProfDefinitivement()">Supprimer Définitivement</button>
+    <button onclick="supprimerProfTemporairement()">Supprimer Temporairement</button>
+    <button onclick="fermerDeleteProfModal()">Annuler</button>
+  </div>
+
+  <!-- Modal "Plus d'info" -->
+  <div id="more-info-modal">
+    <h3>Workshops du professeur</h3>
+    <button id="filter-btn" onclick="ouvrirFilterModal()">Filtrer</button>
+    <div id="workshop-list"></div>
+    <button id="generate-diploma-btn" style="display: none; background-color: #ff5733; margin-top: 10px;" onclick="genererDiplome()">Générer le diplôme</button>
+    <button onclick="fermerMoreInfoModal()">Fermer</button>
+  </div>
+
+  <!-- Modal pour choisir le type de filtre -->
+  <div id="filter-modal">
+    <h3>Vous voulez filtrer avec quoi ?</h3>
+    <button onclick="ouvrirFilterDateModal()">D'une date à une date</button>
+    <button onclick="ouvrirFilterJoinedModal()">Entre deux Joined in</button>
+    <button onclick="fermerFilterModal()">Annuler</button>
+  </div>
+
+  <!-- Modal pour filtrer par date -->
+  <div id="filter-date-modal">
+    <h3>Filtrer par date</h3>
+    <label>Date de début: <input type="date" id="filter-date-start"></label><br>
+    <label>Date de fin: <input type="date" id="filter-date-end"></label><br>
+    <button onclick="filtrerParDate()">Confirmer</button>
+    <button onclick="fermerFilterDateModal()">Annuler</button>
+  </div>
+
+  <!-- Modal pour filtrer par Joined in -->
+  <div id="filter-joined-modal">
+    <h3>Filtrer par Joined in</h3>
+    <label>Joined in début: <select id="filter-joined-start"></select></label><br>
+    <label>Joined in fin: <select id="filter-joined-end"></select></label><br>
+    <button onclick="filtrerParJoined()">Confirmer</button>
+    <button onclick="fermerFilterJoinedModal()">Annuler</button>
+  </div>
+
+  <!-- Modal pour afficher le diplôme -->
+  <div id="diploma-modal">
+    <div id="diploma-content"></div>
+    <button onclick="telechargerPDF()" style="margin-top: 20px; background-color: #007bff;">Télécharger en PDF</button>
+    <button onclick="imprimerDiplome()" style="margin-top: 20px; background-color: #28a745;">Imprimer</button>
+    <button onclick="partagerDiplome()" style="margin-top: 20px; background-color: #ff5733;">Partager</button>
+    <button onclick="fermerDiplomaModal()" style="margin-top: 20px;">Fermer</button>
+  </div>
+
+  <!-- Tableau pour les profs supprimés temporairement -->
+  <h2 id="deleted-table-title" style="display: none;">Professeurs Supprimés Temporairement</h2>
+  <table id="deleted-table" style="display: none;">
+    <thead>
+      <tr>
+        <th>NOM ET PRENOM</th>
+        <th>Joined in</th>
+        <th>Faculty position</th>
+        <th>School</th>
+        <th>Duration (min)</th>
+        <th>Date</th>
+        <th>Présence</th>
+        <th>Workshop ID</th>
+        <th>Type</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="deleted-table-body">
+    </tbody>
+  </table>
+
+  <script>
+    let professeurs = [];
+
+    document.addEventListener("DOMContentLoaded", function() {
+      remplirWorkshopID();
+      remplirJoinedIn();
+      document.getElementById("workshop").addEventListener("change", filterByWorkshop);
+      filterByWorkshop();
+    });
+
+    function remplirJoinedIn() {
+      const selects = document.querySelectorAll("#joined, #presence-joined, #modify-joined, #filter-joined-start, #filter-joined-end");
+      selects.forEach(select => {
+        select.innerHTML = "";
+        const seasons = ["Spring", "Summer", "Fall", "Winter"];
+        for (let year = 2000; year <= 2050; year++) {
+          seasons.forEach(season => {
+            const option = document.createElement("option");
+            option.value = `${season} ${year}`;
+            option.textContent = `${season} ${year}`;
+            select.appendChild(option);
+          });
+        }
+        if (select.id === "joined") {
+          syncDateWithJoined(select);
+        } else if (select.id === "presence-joined") {
+          syncDateWithJoined(select, document.getElementById("presence-date"));
+        } else if (select.id === "modify-joined") {
+          syncDateWithJoined(select, document.getElementById("modify-date"));
+        }
+      });
+    }
+
+    function syncDateWithJoined(select, dateInput = document.getElementById("date")) {
+      const selectedValue = select.value;
+      const year = selectedValue.split(" ")[1];
+      const currentDate = dateInput.value ? new Date(dateInput.value) : new Date();
+      const newDate = new Date(year, currentDate.getMonth(), currentDate.getDate());
+      dateInput.value = newDate.toISOString().split("T")[0];
+    }
+
+    function remplirWorkshopID() {
+      const select = document.getElementById("workshop");
+      select.innerHTML = "";
+      const optionTous = document.createElement("option");
+      optionTous.value = "";
+      optionTous.textContent = "Tous les profs";
+      select.appendChild(optionTous);
+      for (let i = 1; i <= 1000; i++) {
+        const option = document.createElement("option");
+        option.value = i;
+        option.textContent = i;
+        select.appendChild(option);
+      }
+    }
+
+    function fillWorkshopDetails(modalId) {
+      const storedWorkshops = JSON.parse(localStorage.getItem('workshops')) || [];
+      let workshopIdInput, dateInput, durationInput, typeInput;
+
+      if (modalId === 'modal') {
+        workshopIdInput = document.getElementById("workshopID").value;
+        dateInput = document.getElementById("date");
+        durationInput = document.getElementById("duration");
+        typeInput = document.getElementById("type");
+      } else if (modalId === 'presence-modal') {
+        workshopIdInput = document.getElementById("presence-workshopID").value;
+        dateInput = document.getElementById("presence-date");
+        durationInput = document.getElementById("presence-duration");
+        typeInput = document.getElementById("presence-type");
+      }
+
+      const workshop = storedWorkshops.find(w => w.id === workshopIdInput.toString());
+      if (workshop) {
+        dateInput.value = workshop.date || "";
+        typeInput.value = workshop.type || "Présentiel";
+        durationInput.value = workshop.type === "Présentiel" && workshop.duration ? workshop.duration : "";
+      } else {
+        dateInput.value = "";
+        durationInput.value = "";
+        typeInput.value = "Présentiel";
+      }
+    }
+
+    function ouvrirModal(mode = "ajout", row = null) {
+      document.getElementById("nom").value = "";
+      document.getElementById("joined").value = "";
+      document.getElementById("position").value = "";
+      document.getElementById("school").value = "";
+      document.getElementById("duration").value = "";
+      document.getElementById("date").value = "";
+      document.getElementById("workshopID").value = "";
+      document.getElementById("presence").value = "Présent";
+      document.getElementById("type").value = "Présentiel";
+
+      if (mode === "modification" && row) {
+        document.getElementById("nom").value = row.cells[0].textContent;
+        document.getElementById("joined").value = row.cells[1].textContent;
+        document.getElementById("position").value = row.cells[2].textContent;
+        document.getElementById("school").value = row.cells[3].textContent;
+        document.getElementById("duration").value = parseInt(row.cells[4].textContent) || "";
+        document.getElementById("date").value = row.cells[5].textContent;
+        document.getElementById("presence").value = row.cells[6].querySelector("select").value;
+        document.getElementById("workshopID").value = row.cells[7].textContent.split(";")[0];
+        document.getElementById("type").value = row.cells[8].textContent;
+        document.getElementById("modal").dataset.editingRow = row.rowIndex;
+      } else {
+        delete document.getElementById("modal").dataset.editingRow;
+      }
+
+      document.getElementById("modal").style.display = "block";
+      syncDateWithJoined(document.getElementById("joined"));
+    }
+
+    function fermerModal() {
+      document.getElementById("modal").style.display = "none";
+    }
+
+    function ouvrirPresenceModal(row) {
+      document.getElementById("presence-modal").dataset.selectedRow = row.rowIndex;
+      document.getElementById("presence-modal").style.display = "block";
+      remplirJoinedIn();
+    }
+
+    function fermerPresenceModal() {
+      document.getElementById("presence-modal").style.display = "none";
+    }
+
+    function ouvrirModifyModal(row) {
+      document.getElementById("modify-modal").dataset.selectedRow = row.rowIndex;
+      document.getElementById("modify-modal").style.display = "block";
+    }
+
+    function fermerModifyModal() {
+      document.getElementById("modify-modal").style.display = "none";
+    }
+
+    function ouvrirModifyProfModal() {
+      const selectedRowIndex = document.getElementById("modify-modal").dataset.selectedRow;
+      const row = document.getElementById("table-body").rows[selectedRowIndex - 1];
+      document.getElementById("modify-nom").value = row.cells[0].textContent;
+      document.getElementById("modify-position").value = row.cells[2].textContent;
+      document.getElementById("modify-school").value = row.cells[3].textContent;
+      document.getElementById("modify-prof-modal").style.display = "block";
+    }
+
+    function fermerModifyProfModal() {
+      document.getElementById("modify-prof-modal").style.display = "none";
+    }
+
+    function ouvrirModifyWorkshopModal() {
+      const selectedRowIndex = document.getElementById("modify-modal").dataset.selectedRow;
+      const row = document.getElementById("table-body").rows[selectedRowIndex - 1];
+      const nom = row.cells[0].textContent;
+      const professeur = professeurs.find(p => p.nom === nom);
+
+      if (professeur) {
+        const workshopID = row.cells[7].textContent.split(";")[0];
+        const workshop = professeur.workshops.find(w => w.id === workshopID);
+
+        if (workshop) {
+          document.getElementById("modify-workshopID").value = workshop.id;
+          document.getElementById("modify-duration").value = parseInt(workshop.duration) || "";
+          document.getElementById("modify-joined").value = workshop.joined;
+          document.getElementById("modify-date").value = workshop.date;
+          document.getElementById("modify-presence").value = workshop.presence;
+          document.getElementById("modify-type").value = workshop.type || "Présentiel";
+        }
+      }
+
+      document.getElementById("modify-workshop-modal").style.display = "block";
+      remplirJoinedIn();
+    }
+
+    function fermerModifyWorkshopModal() {
+      document.getElementById("modify-workshop-modal").style.display = "none";
+    }
+
+    function confirmerModificationProf() {
+      const selectedRowIndex = document.getElementById("modify-modal").dataset.selectedRow;
+      const row = document.getElementById("table-body").rows[selectedRowIndex - 1];
+      row.cells[0].textContent = document.getElementById("modify-nom").value;
+      row.cells[2].textContent = document.getElementById("modify-position").value;
+      row.cells[3].textContent = document.getElementById("modify-school").value;
+      fermerModifyProfModal();
+      fermerModifyModal();
+    }
+
+    function confirmerModificationWorkshop() {
+      const selectedRowIndex = document.getElementById("modify-modal").dataset.selectedRow;
+      const row = document.getElementById("table-body").rows[selectedRowIndex - 1];
+      const nom = row.cells[0].textContent;
+      const professeur = professeurs.find(p => p.nom === nom);
+
+      if (professeur) {
+        const workshopID = document.getElementById("modify-workshopID").value;
+        const workshop = professeur.workshops.find(w => w.id === workshopID);
+
+        if (workshop) {
+          workshop.duration = document.getElementById("modify-duration").value + " min";
+          workshop.joined = document.getElementById("modify-joined").value;
+          workshop.date = document.getElementById("modify-date").value;
+          workshop.presence = document.getElementById("modify-presence").value;
+          workshop.type = document.getElementById("modify-type").value;
+
+          row.cells[1].textContent = workshop.joined;
+          row.cells[4].textContent = workshop.duration;
+          row.cells[5].textContent = workshop.date;
+          row.cells[6].innerHTML = `
+            <select onchange="filtrerWorkshopParPresence(this)">
+              <option value="Présent" ${workshop.presence === "Présent" ? "selected" : ""}>Présent</option>
+              <option value="Absent" ${workshop.presence === "Absent" ? "selected" : ""}>Absent</option>
+            </select>
+          `;
+          row.cells[7].textContent = professeur.workshops.filter(w => w.presence === workshop.presence).map(w => w.id).join(";");
+          row.cells[8].textContent = workshop.type;
+        }
+      }
+
+      fermerModifyWorkshopModal();
+      fermerModifyModal();
+      filterByWorkshop();
+    }
+
+    function confirmerPresence() {
+      const workshopID = document.getElementById("presence-workshopID").value;
+      const date = document.getElementById("presence-date").value;
+      const joined = document.getElementById("presence-joined").value;
+      const duration = document.getElementById("presence-duration").value;
+      const presenceStatus = document.getElementById("presence-status").value;
+      const type = document.getElementById("presence-type").value;
+      const selectedRowIndex = document.getElementById("presence-modal").dataset.selectedRow;
+
+      if (!selectedRowIndex) {
+        alert("Aucune ligne sélectionnée.");
+        return;
+      }
+
+      const row = document.getElementById("table-body").rows[selectedRowIndex - 1];
+      const nom = row.cells[0].textContent;
+      const school = row.cells[3].textContent;
+      const professeur = professeurs.find(p => p.nom === nom);
+
+      if (professeur) {
+        professeur.workshops.push({
+          id: workshopID,
+          joined: joined,
+          duration: duration + " min",
+          date: date,
+          presence: presenceStatus,
+          type: type
+        });
+
+        row.cells[1].textContent = joined;
+        row.cells[3].textContent = school;
+        row.cells[4].textContent = duration + " min";
+        row.cells[5].textContent = date;
+        row.cells[6].innerHTML = `
+          <select onchange="filtrerWorkshopParPresence(this)">
+            <option value="Présent" ${presenceStatus === "Présent" ? "selected" : ""}>Présent</option>
+            <option value="Absent" ${presenceStatus === "Absent" ? "selected" : ""}>Absent</option>
+          </select>
+        `;
+        row.cells[7].textContent = professeur.workshops.filter(w => w.presence === presenceStatus).map(w => w.id).join(";");
+        row.cells[8].textContent = type;
+      }
+
+      fermerPresenceModal();
+      filterByWorkshop();
+    }
+
+    function ajouterProfesseur() {
+      const nom = document.getElementById("nom").value.trim();
+      const joined = document.getElementById("joined").value;
+      const position = document.getElementById("position").value.trim();
+      const school = document.getElementById("school").value;
+      const duration = document.getElementById("duration").value;
+      const date = document.getElementById("date").value;
+      const workshopID = document.getElementById("workshopID").value;
+      const presence = document.getElementById("presence").value;
+      const type = document.getElementById("type").value;
+
+      let missingFields = [];
+      if (!nom) missingFields.push("Nom et prénom");
+      if (!joined) missingFields.push("Joined in");
+      if (!position) missingFields.push("Faculty position");
+      if (!school) missingFields.push("School");
+      if (!duration) missingFields.push("Duration");
+      if (!date) missingFields.push("Date");
+      if (!workshopID) missingFields.push("Workshop ID");
+      if (!presence) missingFields.push("Présence");
+      if (!type) missingFields.push("Type");
+
+      if (missingFields.length > 0) {
+        const existingAlert = document.querySelector('.custom-alert');
+        if (existingAlert) existingAlert.remove();
+
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'custom-alert';
+        alertDiv.innerHTML = `
+          ⚠️ Champs obligatoires manquants !<br>
+          Veuillez remplir : ${missingFields.join(', ')}
+        `;
+        document.body.appendChild(alertDiv);
+
+        setTimeout(() => {
+          alertDiv.remove();
+        }, 3000);
+
+        return;
+      }
+
+      const modal = document.getElementById("modal");
+      const editingRowIndex = modal.dataset.editingRow;
+
+      if (!editingRowIndex) {
+        const professeurExistant = professeurs.find(p => p.nom.toLowerCase() === nom.toLowerCase());
+        if (professeurExistant) {
+          professeurExistant.workshops.push({
+            id: workshopID,
+            joined: joined,
+            duration: duration + " min",
+            date: date,
+            presence: presence,
+            type: type
+          });
+
+          const rows = document.querySelectorAll("#table-body tr");
+          rows.forEach(row => {
+            if (row.cells[0].textContent.toLowerCase() === nom.toLowerCase()) {
+              row.cells[7].textContent = professeurExistant.workshops
+                .filter(w => w.presence === presence)
+                .map(w => w.id)
+                .join(";");
+            }
+          });
+
+          const successAlert = document.createElement('div');
+          successAlert.className = 'custom-alert';
+          successAlert.innerHTML = '✅ Workshop ajouté au professeur existant !';
+          document.body.appendChild(successAlert);
+          setTimeout(() => successAlert.remove(), 2000);
+
+          fermerModal();
+          filterByWorkshop();
+          return;
+        }
+      }
+
+      if (editingRowIndex) {
+        const row = document.getElementById("table-body").rows[editingRowIndex - 1];
+        const professeur = professeurs.find(p => p.nom === row.cells[0].textContent);
+        if (professeur) {
+          const workshop = professeur.workshops.find(w => w.id === workshopID) || {};
+          workshop.id = workshopID;
+          workshop.joined = joined;
+          workshop.duration = duration + " min";
+          workshop.date = date;
+          workshop.presence = presence;
+          workshop.type = type;
+
+          row.cells[0].textContent = nom;
+          row.cells[1].textContent = joined;
+          row.cells[2].textContent = position;
+          row.cells[3].textContent = school;
+          row.cells[4].textContent = duration + " min";
+          row.cells[5].textContent = date;
+          row.cells[6].innerHTML = `
+            <select onchange="filtrerWorkshopParPresence(this)">
+              <option value="Présent" ${presence === "Présent" ? "selected" : ""}>Présent</option>
+              <option value="Absent" ${presence === "Absent" ? "selected" : ""}>Absent</option>
+            </select>
+          `;
+          row.cells[7].textContent = professeur.workshops.filter(w => w.presence === presence).map(w => w.id).join(";");
+          row.cells[8].textContent = type;
+        }
+      } else {
+        const tbody = document.getElementById("table-body");
+        const row = tbody.insertRow();
+        row.insertCell(0).textContent = nom;
+        row.insertCell(1).textContent = joined;
+        row.insertCell(2).textContent = position;
+        row.insertCell(3).textContent = school;
+        row.insertCell(4).textContent = duration + " min";
+        row.insertCell(5).textContent = date;
+        row.insertCell(6).innerHTML = `
+          <select onchange="filtrerWorkshopParPresence(this)">
+            <option value="Présent" ${presence === "Présent" ? "selected" : ""}>Présent</option>
+            <option value="Absent" ${presence === "Absent" ? "selected" : ""}>Absent</option>
+          </select>
+        `;
+        row.insertCell(7).textContent = workshopID;
+        row.insertCell(8).textContent = type;
+        row.insertCell(9).innerHTML = `
+          <button onclick="ouvrirPresenceModal(this.parentElement.parentElement)">Marquer la présence</button>
+          <button onclick="ouvrirModifyModal(this.parentElement.parentElement)">Modifier</button>
+          <button onclick="supprimerLigne(this)" style="background-color: #dc3545; color: white;">Supprimer</button>
+          <button id="more-info-btn" onclick="ouvrirMoreInfoModal(this.parentElement.parentElement)">Plus d'info</button>
+        `;
+
+        professeurs.push({
+          nom: nom,
+          workshops: [{
+            id: workshopID,
+            joined: joined,
+            duration: duration + " min",
+            date: date,
+            presence: presence,
+            type: type
+          }]
+        });
+      }
+
+      delete modal.dataset.editingRow;
+      fermerModal();
+      filterByWorkshop();
+    }
+
+    function filtrerWorkshopParPresence(select) {
+      const presence = select.value;
+      const row = select.parentElement.parentElement;
+      const nom = row.cells[0].textContent;
+      const professeur = professeurs.find(p => p.nom === nom);
+
+      if (professeur) {
+        const filteredWorkshops = professeur.workshops.filter(w => w.presence === presence);
+        row.cells[7].textContent = filteredWorkshops.map(w => w.id).join(";");
+        
+        if (filteredWorkshops.length > 0) {
+          const workshop = filteredWorkshops[0];
+          row.cells[1].textContent = workshop.joined;
+          row.cells[4].textContent = workshop.duration;
+          row.cells[5].textContent = workshop.date;
+          row.cells[8].textContent = workshop.type;
+        } else {
+          row.cells[1].textContent = "";
+          row.cells[4].textContent = "";
+          row.cells[5].textContent = "";
+          row.cells[8].textContent = "";
+        }
+      }
+      filterByWorkshop();
+    }
+
+    function supprimerLigne(button) {
+      const row = button.parentElement.parentElement;
+      const nom = row.cells[0].textContent;
+      document.getElementById("delete-confirm-modal").dataset.selectedRow = row.rowIndex;
+      document.getElementById("delete-confirm-modal").style.display = "block";
+    }
+
+    function filterByWorkshop() {
+      const selectedWorkshopID = document.getElementById("workshop").value;
+      const rows = document.querySelectorAll("#table-body tr");
+      let presentCount = 0;
+
+      rows.forEach(function(row) {
+        const nom = row.cells[0].textContent;
+        const professeur = professeurs.find(p => p.nom === nom);
+
+        if (professeur) {
+          const presence = row.cells[6].querySelector("select").value;
+          const filteredWorkshops = professeur.workshops.filter(w => w.presence === presence);
+          row.cells[7].textContent = filteredWorkshops.map(w => w.id).join(";");
+
+          if (filteredWorkshops.length > 0) {
+            const workshop = filteredWorkshops.find(w => w.id === selectedWorkshopID) || filteredWorkshops[0];
+            row.cells[1].textContent = workshop.joined;
+            row.cells[4].textContent = workshop.duration;
+            row.cells[5].textContent = workshop.date;
+            row.cells[6].innerHTML = `
+              <select onchange="filtrerWorkshopParPresence(this)">
+                <option value="Présent" ${workshop.presence === "Présent" ? "selected" : ""}>Présent</option>
+                <option value="Absent" ${workshop.presence === "Absent" ? "selected" : ""}>Absent</option>
+              </select>
+            `;
+            row.cells[8].textContent = workshop.type;
+
+            if (selectedWorkshopID && workshop.presence === "Présent" && workshop.id === selectedWorkshopID) {
+              presentCount++;
+            }
+          }
+
+          let workshopCell = row.cells[7].textContent;
+          if (selectedWorkshopID === "" || workshopCell.split(";").includes(selectedWorkshopID)) {
+            row.style.display = "";
+          } else {
+            row.style.display = "none";
+          }
+        }
+      });
+
+      document.getElementById("attendance-count").textContent = `Attendance by workshop: ${presentCount}`;
+    }
+
+    function searchTable() {
+      const searchInput = document.getElementById("search").value.toLowerCase();
+      const rows = document.querySelectorAll("#table-body tr");
+
+      rows.forEach(function(row) {
+        let cells = row.getElementsByTagName("td");
+        let matched = false;
+
+        for (let i = 0; i < cells.length; i++) {
+          if (cells[i].textContent.toLowerCase().includes(searchInput)) {
+            matched = true;
+            break;
+          }
+        }
+
+        row.style.display = matched ? "" : "none";
+      });
+    }
+
+    function ouvrirStatsModal() {
+      document.getElementById("stats-modal").style.display = "block";
+    }
+
+    function fermerStatsModal() {
+      document.getElementById("stats-modal").style.display = "none";
+    }
+
+    function afficherStatistiques() {
+      const nomInput = document.getElementById("stats-nom").value.trim();
+      if (!nomInput) {
+        alert("Veuillez entrer un nom ou prénom.");
+        return;
+      }
+
+      const professeur = professeurs.find(p => p.nom.toLowerCase().includes(nomInput.toLowerCase()));
+      if (!professeur) {
+        alert("Professeur non trouvé.");
+        return;
+      }
+
+      localStorage.setItem("selectedProf", JSON.stringify(professeur));
+      fermerStatsModal();
+      window.location.href = "statistiques.html";
+    }
+
+    function exporterCSV() {
+      const rows = document.querySelectorAll("#table-body tr");
+      let csvContent = "data:text/csv;charset=utf-8,";
+      const headers = ["NOM ET PRENOM", "Joined in", "Faculty position", "School", "Duration (min)", "Date", "Présence", "Workshop ID", "Type"];
+      csvContent += headers.join(",") + "\n";
+
+      rows.forEach(function(row) {
+        const nom = row.cells[0].textContent;
+        const professeur = professeurs.find(p => p.nom === nom);
+
+        if (professeur) {
+          professeur.workshops.forEach(workshop => {
+            let rowData = [
+              nom,
+              workshop.joined,
+              row.cells[2].textContent,
+              row.cells[3].textContent,
+              workshop.duration,
+              workshop.date,
+              workshop.presence,
+              workshop.id,
+              workshop.type
+            ];
+            csvContent += rowData.join(",") + "\n";
+          });
+        }
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "enseignants.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function fermerDeleteConfirmModal() {
+      document.getElementById("delete-confirm-modal").style.display = "none";
+    }
+
+    function ouvrirDeleteWorkshopModal() {
+      fermerDeleteConfirmModal();
+      document.getElementById("delete-workshop-modal").style.display = "block";
+    }
+
+    function fermerDeleteWorkshopModal() {
+      document.getElementById("delete-workshop-modal").style.display = "none";
+    }
+
+    function ouvrirDeleteProfModal() {
+      fermerDeleteConfirmModal();
+      document.getElementById("delete-prof-modal").style.display = "block";
+    }
+
+    function fermerDeleteProfModal() {
+      document.getElementById("delete-prof-modal").style.display = "none";
+    }
+
+    function confirmerSuppressionWorkshop() {
+      const workshopID = document.getElementById("delete-workshopID").value;
+      const selectedRowIndex = document.getElementById("delete-confirm-modal").dataset.selectedRow;
+      const row = document.getElementById("table-body").rows[selectedRowIndex - 1];
+      const nom = row.cells[0].textContent;
+      const professeur = professeurs.find(p => p.nom === nom);
+
+      if (professeur) {
+        professeur.workshops = professeur.workshops.filter(w => w.id !== workshopID);
+        const presence = row.cells[6].querySelector("select").value;
+        row.cells[7].textContent = professeur.workshops.filter(w => w.presence === presence).map(w => w.id).join(";");
+
+        if (professeur.workshops.length === 0) {
+          row.remove();
+          professeurs = professeurs.filter(p => p.nom !== nom);
+        } else {
+          const workshop = professeur.workshops[0];
+          row.cells[1].textContent = workshop.joined;
+          row.cells[4].textContent = workshop.duration;
+          row.cells[5].textContent = workshop.date;
+          row.cells[6].innerHTML = `
+            <select onchange="filtrerWorkshopParPresence(this)">
+              <option value="Présent" ${workshop.presence === "Présent" ? "selected" : ""}>Présent</option>
+              <option value="Absent" ${workshop.presence === "Absent" ? "selected" : ""}>Absent</option>
+            </select>
+          `;
+          row.cells[8].textContent = workshop.type;
+        }
+      }
+
+      fermerDeleteWorkshopModal();
+      filterByWorkshop();
+    }
+
+    function supprimerProfDefinitivement() {
+      const selectedRowIndex = document.getElementById("delete-confirm-modal").dataset.selectedRow;
+      const row = document.getElementById("table-body").rows[selectedRowIndex - 1];
+      const nom = row.cells[0].textContent;
+      professeurs = professeurs.filter(p => p.nom !== nom);
+      row.remove();
+      fermerDeleteProfModal();
+      filterByWorkshop();
+    }
+
+    function supprimerProfTemporairement() {
+      const selectedRowIndex = document.getElementById("delete-confirm-modal").dataset.selectedRow;
+      const row = document.getElementById("table-body").rows[selectedRowIndex - 1];
+      const nom = row.cells[0].textContent;
+      const deletedTableBody = document.getElementById("deleted-table-body");
+
+      const newRow = deletedTableBody.insertRow();
+      newRow.insertCell(0).textContent = row.cells[0].textContent;
+      newRow.insertCell(1).textContent = row.cells[1].textContent;
+      newRow.insertCell(2).textContent = row.cells[2].textContent;
+      newRow.insertCell(3).textContent = row.cells[3].textContent;
+      newRow.insertCell(4).textContent = row.cells[4].textContent;
+      newRow.insertCell(5).textContent = row.cells[5].textContent;
+      newRow.insertCell(6).textContent = row.cells[6].querySelector("select").value;
+      newRow.insertCell(7).textContent = row.cells[7].textContent;
+      newRow.insertCell(8).textContent = row.cells[8].textContent;
+      newRow.insertCell(9).innerHTML = `
+        <button onclick="recupererProf(this)">Récupérer</button>
+      `;
+
+      professeurs = professeurs.filter(p => p.nom !== nom);
+      row.remove();
+      fermerDeleteProfModal();
+      filterByWorkshop();
+    }
+
+    function recupererProf(button) {
+      const row = button.parentElement.parentElement;
+      const tableBody = document.getElementById("table-body");
+
+      const nom = row.cells[0].textContent;
+      const joined = row.cells[1].textContent;
+      const position = row.cells[2].textContent;
+      const school = row.cells[3].textContent;
+      const duration = row.cells[4].textContent;
+      const date = row.cells[5].textContent;
+      const presence = row.cells[6].textContent;
+      const workshopIDs = row.cells[7].textContent.split(";");
+      const type = row.cells[8].textContent;
+
+      let professeur = professeurs.find(p => p.nom === nom);
+      if (!professeur) {
+        professeur = {
+          nom: nom,
+          workshops: []
+        };
+        professeurs.push(professeur);
+      }
+
+      workshopIDs.forEach(workshopID => {
+        if (workshopID && !professeur.workshops.some(w => w.id === workshopID)) {
+          professeur.workshops.push({
+            id: workshopID,
+            joined: joined,
+            duration: duration,
+            date: date,
+            presence: presence,
+            type: type
+          });
+        }
+      });
+
+      const newRow = tableBody.insertRow();
+      newRow.insertCell(0).textContent = nom;
+      newRow.insertCell(1).textContent = joined;
+      newRow.insertCell(2).textContent = position;
+      newRow.insertCell(3).textContent = school;
+      newRow.insertCell(4).textContent = duration;
+      newRow.insertCell(5).textContent = date;
+      newRow.insertCell(6).innerHTML = `
+        <select onchange="filtrerWorkshopParPresence(this)">
+          <option value="Présent" ${presence === "Présent" ? "selected" : ""}>Présent</option>
+          <option value="Absent" ${presence === "Absent" ? "selected" : ""}>Absent</option>
+        </select>
+      `;
+      newRow.insertCell(7).textContent = professeur.workshops.filter(w => w.presence === presence).map(w => w.id).join(";");
+      newRow.insertCell(8).textContent = type;
+      newRow.insertCell(9).innerHTML = `
+        <button onclick="ouvrirPresenceModal(this.parentElement.parentElement)">Marquer la présence</button>
+        <button onclick="ouvrirModifyModal(this.parentElement.parentElement)">Modifier</button>
+        <button onclick="supprimerLigne(this)" style="background-color: #dc3545; color: white;">Supprimer</button>
+        <button id="more-info-btn" onclick="ouvrirMoreInfoModal(this.parentElement.parentElement)">Plus d'info</button>
+      `;
+
+      row.remove();
+      filterByWorkshop();
+    }
+
+    function switchTable() {
+      const mainTable = document.getElementById("main-table");
+      const deletedTable = document.getElementById("deleted-table");
+      const deletedTableTitle = document.getElementById("deleted-table-title");
+
+      if (mainTable.style.display === "none") {
+        mainTable.style.display = "";
+        deletedTable.style.display = "none";
+        deletedTableTitle.style.display = "none";
+      } else {
+        mainTable.style.display = "none";
+        deletedTable.style.display = "";
+        deletedTableTitle.style.display = "";
+      }
+    }
+
+    function ouvrirMoreInfoModal(row) {
+      const nom = row.cells[0].textContent;
+      const professeur = professeurs.find(p => p.nom === nom);
+      const storedWorkshops = JSON.parse(localStorage.getItem('workshops')) || [];
+      const workshopList = document.getElementById("workshop-list");
+      const generateButton = document.getElementById("generate-diploma-btn");
+
+      if (professeur) {
+        let workshops = professeur.workshops.map(workshop => {
+          const storedWorkshop = storedWorkshops.find(w => w.id === workshop.id);
+          return {
+            id: workshop.id,
+            date: workshop.date,
+            duration: workshop.duration,
+            title: storedWorkshop && storedWorkshop.title ? storedWorkshop.title : `Workshop ${workshop.id}`
+          };
+        });
+
+        workshops.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        workshopList.innerHTML = workshops.map(w => `
+          <div>
+            <input type="checkbox" id="workshop-${w.id}" name="workshop-${w.id}" onchange="toggleGenerateButton()">
+            <label for="workshop-${w.id}">${w.id} - ${w.title} (${w.date})</label>
+          </div>
+        `).join("");
+
+        document.getElementById("more-info-modal").dataset.profName = nom;
+      }
+
+      document.getElementById("more-info-modal").dataset.selectedRow = row.rowIndex;
+      document.getElementById("more-info-modal").style.display = "block";
+      generateButton.style.display = "none";
+    }
+
+    function fermerMoreInfoModal() {
+      document.getElementById("more-info-modal").style.display = "none";
+    }
+
+    function toggleGenerateButton() {
+      const checkboxes = document.querySelectorAll("#workshop-list input[type='checkbox']");
+      const generateButton = document.getElementById("generate-diploma-btn");
+      const isAnyChecked = Array.from(checkboxes).some(checkbox => checkbox.checked);
+      generateButton.style.display = isAnyChecked ? "inline-block" : "none";
+    }
+
+    function genererDiplome() {
+      const checkboxes = document.querySelectorAll("#workshop-list input[type='checkbox']:checked");
+      const profName = document.getElementById("more-info-modal").dataset.profName;
+      const diplomaContent = document.getElementById("diploma-content");
+      const storedWorkshops = JSON.parse(localStorage.getItem('workshops')) || [];
+      const currentYear = new Date().getFullYear();
+
+      let selectedWorkshops = [];
+      checkboxes.forEach(checkbox => {
+        const workshopId = checkbox.id.split("workshop-")[1];
+        const professeur = professeurs.find(p => p.nom === profName);
+        const workshop = professeur.workshops.find(w => w.id === workshopId);
+        const storedWorkshop = storedWorkshops.find(w => w.id === workshopId);
+        const date = new Date(workshop.date);
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const formattedDate = `${monthNames[date.getMonth()]}, ${date.getDate().toString().padStart(2, '0')}, ${date.getFullYear()}`;
+        const durationParts = workshop.duration.split(" ");
+        const durationInMinutes = parseInt(durationParts[0]);
+        const hours = Math.floor(durationInMinutes / 60);
+        const minutes = durationInMinutes % 60;
+        const durationFormatted = `${hours} hr ${minutes} min`;
+
+        selectedWorkshops.push({
+          id: workshop.id,
+          title: storedWorkshop ? storedWorkshop.title : `Workshop ${workshop.id}`,
+          date: formattedDate,
+          duration: durationFormatted
+        });
+      });
+
+      diplomaContent.innerHTML = `
+        <img src="imager/Aui-logo.png" alt="Logo" class="logo">
+        <div class="academic-year">Academic Year: ${currentYear}-${currentYear + 1}</div>
+        <h1>CERTIFICATE OF ATTENDANCE TERM ${currentYear}</h1>
+        <div class="recipient">This certificate is awarded to ${profName.toUpperCase()}</div>
+        <p>For completing the following workshops:</p>
+        <ul class="workshop-list">
+          ${selectedWorkshops.map(w => `<li>${w.title} (${w.date} - ${w.duration})</li>`).join("")}
+        </ul>
+        <div class="signature">DR. KARIM MOUSTAGHFIR</div>
+        <div class="signature-line"></div>
+        <div class="signature-subtitle">AVP for 21st Century Learning Innovation & Faculty Development</div>
+      `;
+
+      document.getElementById("diploma-modal").style.display = "block";
+    }
+
+    function fermerDiplomaModal() {
+      document.getElementById("diploma-modal").style.display = "none";
+    }
+
+    function ouvrirFilterModal() {
+      document.getElementById("filter-modal").style.display = "block";
+    }
+
+    function fermerFilterModal() {
+      document.getElementById("filter-modal").style.display = "none";
+    }
+
+    function ouvrirFilterDateModal() {
+      fermerFilterModal();
+      document.getElementById("filter-date-modal").style.display = "block";
+    }
+
+    function fermerFilterDateModal() {
+      document.getElementById("filter-date-modal").style.display = "none";
+    }
+
+    function ouvrirFilterJoinedModal() {
+      fermerFilterModal();
+      document.getElementById("filter-joined-modal").style.display = "block";
+      remplirJoinedIn();
+    }
+
+    function fermerFilterJoinedModal() {
+      document.getElementById("filter-joined-modal").style.display = "none";
+    }
+
+    function filtrerParDate() {
+      const startDate = document.getElementById("filter-date-start").value;
+      const endDate = document.getElementById("filter-date-end").value;
+      const selectedRowIndex = document.getElementById("more-info-modal").dataset.selectedRow;
+      const row = document.getElementById("table-body").rows[selectedRowIndex - 1];
+      const nom = row.cells[0].textContent;
+      const professeur = professeurs.find(p => p.nom === nom);
+      const storedWorkshops = JSON.parse(localStorage.getItem('workshops')) || [];
+      const workshopList = document.getElementById("workshop-list");
+
+      if (professeur && startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        let filteredWorkshops = professeur.workshops.filter(workshop => {
+          const workshopDate = new Date(workshop.date);
+          return workshopDate >= start && workshopDate <= end;
+        }).map(workshop => {
+          const storedWorkshop = storedWorkshops.find(w => w.id === workshop.id);
+          return {
+            id: workshop.id,
+            date: workshop.date,
+            duration: workshop.duration,
+            title: storedWorkshop ? storedWorkshop.title : `Workshop ${workshop.id}`
+          };
+        });
+
+        filteredWorkshops.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        workshopList.innerHTML = filteredWorkshops.map(w => `
+          <div>
+            <input type="checkbox" id="workshop-${w.id}" name="workshop-${w.id}" onchange="toggleGenerateButton()">
+            <label for="workshop-${w.id}">${w.id} - ${w.title} (${w.date})</label>
+          </div>
+        `).join("");
+      }
+
+      fermerFilterDateModal();
+    }
+
+    function filtrerParJoined() {
+      const startJoined = document.getElementById("filter-joined-start").value;
+      const endJoined = document.getElementById("filter-joined-end").value;
+      const selectedRowIndex = document.getElementById("more-info-modal").dataset.selectedRow;
+      const row = document.getElementById("table-body").rows[selectedRowIndex - 1];
+      const nom = row.cells[0].textContent;
+      const professeur = professeurs.find(p => p.nom === nom);
+      const storedWorkshops = JSON.parse(localStorage.getItem('workshops')) || [];
+      const workshopList = document.getElementById("workshop-list");
+
+      if (professeur && startJoined && endJoined) {
+        const startYear = parseInt(startJoined.split(" ")[1]);
+        const endYear = parseInt(endJoined.split(" ")[1]);
+
+        let filteredWorkshops = professeur.workshops.filter(workshop => {
+          const workshopYear = parseInt(workshop.joined.split(" ")[1]);
+          return workshopYear >= startYear && workshopYear <= endYear;
+        }).map(workshop => {
+          const storedWorkshop = storedWorkshops.find(w => w.id === workshop.id);
+          return {
+            id: workshop.id,
+            date: workshop.date,
+            duration: workshop.duration,
+            title: storedWorkshop ? storedWorkshop.title : `Workshop ${workshop.id}`
+          };
+        });
+
+        filteredWorkshops.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        workshopList.innerHTML = filteredWorkshops.map(w => `
+          <div>
+            <input type="checkbox" id="workshop-${w.id}" name="workshop-${w.id}" onchange="toggleGenerateButton()">
+            <label for="workshop-${w.id}">${w.id} - ${w.title} (${w.date})</label>
+          </div>
+        `).join("");
+      }
+
+      fermerFilterJoinedModal();
+    }
+
+    function telechargerPDF() {
+      const element = document.getElementById("diploma-content");
+      const opt = {
+        margin: 1,
+        filename: `Diplome_${document.getElementById("more-info-modal").dataset.profName}_${new Date().getFullYear()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    function imprimerDiplome() {
+      const content = document.getElementById("diploma-content").innerHTML;
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Impression du Diplôme</title>
+            <style>
+              body { font-family: 'Times New Roman', serif; text-align: center; }
+              .logo { max-width: 150px; margin-bottom: 20px; }
+              h1 { font-size: 24px; text-transform: uppercase; color: #2c3e50; margin-bottom: 20px; }
+              .academic-year { font-size: 16px; color: #7f8c8d; }
+              .recipient { font-size: 20px; margin: 20px 0; font-weight: bold; }
+              .workshop-list { list-style: none; padding: 0; margin: 20px 0; font-size: 16px; }
+              .workshop-list li { margin: 10px 0; }
+              .signature { font-family: 'Brush Script MT', cursive; font-size: 24px; color: #2c3e50; margin-top: 30px; margin-bottom: 5px; }
+              .signature-line { width: 200px; height: 1px; background-color: #2c3e50; margin: 0 auto 10px auto; }
+              .signature-subtitle { font-size: 14px; color: #7f8c8d; }
+            </style>
+          </head>
+          <body>${content}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+
+    function partagerDiplome() {
+      const profName = document.getElementById("more-info-modal").dataset.profName;
+      const currentYear = new Date().getFullYear();
+      const title = `Certificate of Attendance Term ${currentYear} - ${profName}`;
+      const text = `Voici le diplôme de ${profName} pour l'année académique ${currentYear}-${currentYear + 1}.`;
+      const url = window.location.href;
+
+      if (navigator.share) {
+        navigator.share({
+          title: title,
+          text: text,
+          url: url
+        }).then(() => console.log('Partage réussi'))
+          .catch((error) => console.log('Erreur de partage', error));
+      } else {
+        const shareText = `${title}\n${text}\n${url}`;
+        navigator.clipboard.writeText(shareText).then(() => {
+          alert('Lien copié dans le presse-papiers ! Partagez-le manuellement.');
+        });
+      }
+    }
+  </script>
+</body>
+</html>
